@@ -240,3 +240,6 @@ This project successfully analyzes a synthetic dataset on student habits, identi
 5. Run tests with `coverage run -m unittest test_student_analysis.py`.
 6. See coverage report with `coverage report -m`.
 7. Review the generated visualizations in the `plots` directory.
+
+### References
+- Kaggle: [Student Habits and Academic Performance Dataset](https://www.kaggle.com/datasets/jayaantanaath/student-habits-vs-academic-performance/data)
