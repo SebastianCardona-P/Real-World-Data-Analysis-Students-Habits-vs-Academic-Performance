@@ -16,13 +16,17 @@ def load_data(file_path: str) -> pd.DataFrame:
         raise ValueError("CSV file is empty.")
 
 def clean_data(df: pd.DataFrame) -> pd.DataFrame:
-    """Clean the dataset by handling missing values and invalid entries."""
+    """Clean the dataset by handling missing values, invalid entries, and unrealistic hours."""
     df = df.copy()
     df = df.dropna()
+
+    # Ensure numerical columns are non-negative
     numerical_cols = ['age', 'study_hours_per_day', 'social_media_hours', 'netflix_hours',
                      'attendance_percentage', 'sleep_hours', 'exercise_frequency', 'mental_health_rating', 'exam_score']
     for col in numerical_cols:
         df = df[df[col] >= 0]
+
+    # Clip numerical values to realistic ranges
     df['age'] = df['age'].clip(15, 30)
     df['study_hours_per_day'] = df['study_hours_per_day'].clip(0, 24)
     df['social_media_hours'] = df['social_media_hours'].clip(0, 24)
@@ -30,6 +34,17 @@ def clean_data(df: pd.DataFrame) -> pd.DataFrame:
     df['sleep_hours'] = df['sleep_hours'].clip(0, 24)
     df['attendance_percentage'] = df['attendance_percentage'].clip(0, 100)
     df['exam_score'] = df['exam_score'].clip(0, 100)
+
+    # Check for rows where total hours exceed 24
+    df['total_hours'] = df['sleep_hours'] + df['social_media_hours'] + df['study_hours_per_day'] + df['netflix_hours']
+    unrealistic_rows = df[df['total_hours'] > 24]
+
+    if not unrealistic_rows.empty:
+        print("Found rows with unrealistic total hours (>24):")
+        print(unrealistic_rows[['student_id', 'sleep_hours', 'social_media_hours', 'study_hours_per_day', 'netflix_hours', 'total_hours']])
+        df = df[df['total_hours'] <= 24]
+
+    df = df.drop(columns=['total_hours'])
     return df
 
 def plot_pie_chart(data: pd.Series, title: str, filename: str) -> None:
@@ -125,7 +140,8 @@ def analyze_and_visualize(file_path: str, output_dir: str = 'plots') -> dict:
         ('study_hours_per_day', 'exam_score', 'Study Hours vs Exam Score'),
         ('social_media_hours', 'exam_score', 'Social Media Hours vs Exam Score'),
         ('netflix_hours', 'exam_score', 'Netflix Hours vs Exam Score'),
-        ('mental_health_rating', 'exam_score', 'Mental Health vs Exam Score')
+        ('mental_health_rating', 'exam_score', 'Mental Health vs Exam Score'),
+        ('sleep_hours', 'exam_score', 'Sleep Hours vs Exam Score')  # Added new relationship
     ]
 
     for x_col, y_col, title in relationships:
@@ -134,17 +150,10 @@ def analyze_and_visualize(file_path: str, output_dir: str = 'plots') -> dict:
         results['correlations'][f"{x_col}_vs_{y_col}"] = corr
 
     # New visualizations for hypotheses
-    # Part-time job vs. study hours and exam scores
     plot_boxplot(df, 'part_time_job', 'study_hours_per_day', 'Part-Time Job vs Study Hours', f"{output_dir}/part_time_job_vs_study_hours_box.png")
     plot_boxplot(df, 'part_time_job', 'exam_score', 'Part-Time Job vs Exam Score', f"{output_dir}/part_time_job_vs_exam_score_box.png")
-
-    # Parental education vs. exam scores
     plot_boxplot(df, 'parental_education_level', 'exam_score', 'Parental Education vs Exam Score', f"{output_dir}/parental_education_vs_exam_score_box.png")
-
-    # Internet quality vs. exam scores
     plot_boxplot(df, 'internet_quality', 'exam_score', 'Internet Quality vs Exam Score', f"{output_dir}/internet_quality_vs_exam_score_box.png")
-
-    # Extracurricular participation vs. mental health and study hours
     plot_boxplot(df, 'extracurricular_participation', 'mental_health_rating', 'Extracurricular Participation vs Mental Health', f"{output_dir}/extracurricular_vs_mental_health_box.png")
     plot_boxplot(df, 'extracurricular_participation', 'study_hours_per_day', 'Extracurricular Participation vs Study Hours', f"{output_dir}/extracurricular_vs_study_hours_box.png")
 
